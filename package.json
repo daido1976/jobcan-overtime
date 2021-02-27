@@ -2,7 +2,8 @@
   "name": "jobcan-overtime",
   "version": "1.0.0",
   "scripts": {
-    "start": "ts-node src/index.ts"
+    "start": "ts-node src/index.ts",
+    "start:holiday": "ts-node src/index.ts --holiday"
   },
   "devDependencies": {
     "@types/node": "^14.14.31",

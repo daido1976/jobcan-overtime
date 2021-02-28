@@ -2,7 +2,7 @@ import puppeteer from "puppeteer";
 
 // main
 (async () => {
-  const browser = await puppeteer.launch({ headless: false });
+  const browser = await puppeteer.launch();
   const newPage = await browser.newPage();
   const loggedInPage = await login(newPage);
   const attendancePage = await visitAttendancePage(browser, loggedInPage);
@@ -41,11 +41,14 @@ const visitAttendancePage = async (
   const lastPage = pages[pages.length - 1];
   await lastPage.bringToFront();
 
+  // 何故かヘッドレスモードの時だけ、サイドメニューが閉じているので開く
+  await lastPage.click("#sidemenu-closed > div > button");
+  await lastPage.waitForTimeout(1000);
+
   // 「出勤簿」リンクをクリック
-  await Promise.all([
-    lastPage.waitForNavigation(),
-    lastPage.click("#sidemenu > div.flex-shrink-0 > div > a:nth-child(1)"),
-  ]);
+  await lastPage.click("#sidemenu > div.flex-shrink-0 > div > a:nth-child(1)");
+  await lastPage.waitForTimeout(5000);
+
   return lastPage;
 };
 

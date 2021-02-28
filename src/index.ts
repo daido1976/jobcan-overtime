@@ -1,39 +1,20 @@
 import puppeteer from "puppeteer";
 
+// main
 (async () => {
   const browser = await puppeteer.launch({ headless: false });
-  const page = await browser.newPage();
-  const loggedInPage = await login(page);
+  const newPage = await browser.newPage();
+  const loggedInPage = await login(newPage);
   const attendancePage = await visitAttendancePage(browser, loggedInPage);
-  const workedHours = await attendancePage.$eval(
-    "#search-result > div.row > div:nth-child(3) > div > div.card-body > table > tbody > tr:nth-child(1) > td > span",
-    (e) => {
-      const workedTimeStr = e.textContent; // e.g. "33:04"
-      const [hours, minutes] = workedTimeStr.split(":");
-      return parseFloat(hours) + parseFloat(minutes) / 60;
-    }
-  );
-
-  const workedDays = await attendancePage.$eval(
-    "#search-result > div.row > div:nth-child(2) > div > div.card-body > table > tbody > tr:nth-child(1) > td > span",
-    (e) => parseInt(e.textContent)
-  );
-
-  // const overtime =
-  //   process.argv[process.argv.length - 1] !== "--holiday"
-  //     ? workedHours - workedDays * 8 // 出勤日当日の午後以降に確認する用
-  //     : workedHours - (workedDays - 1) * 8; // 出勤日当日の朝や休日などに確認する用
-  // TODO: 平日に実働日数が増えるタイミングを確認して、不要ならば上記のコードと $ npm run start:holiday は消す
-  const overtime = workedHours - workedDays * 8;
-  const formattedOvertime = `${Math.floor(overtime)} 時間 ${Math.floor(
-    (overtime - Math.floor(overtime)) * 60
-  )} 分`;
-  console.log(formattedOvertime);
+  const workedHours = await fetchWorkedHours(attendancePage);
+  const workedDays = await fetchWorkedDays(attendancePage);
+  const overtime = calcOvertime(workedHours, workedDays);
+  print(overtime);
 
   await browser.close();
 })();
 
-// メールアドレスとパスワードを入力して「ログイン」ボタンをクリックする
+// ログイン処理
 const login = async (page: puppeteer.Page): Promise<puppeteer.Page> => {
   await page.goto("https://id.jobcan.jp/users/sign_in");
   await page.type("#user_email", process.env.MY_EMAIL);
@@ -45,21 +26,72 @@ const login = async (page: puppeteer.Page): Promise<puppeteer.Page> => {
   return page;
 };
 
+// 「出勤簿」ページにアクセスする
 const visitAttendancePage = async (
   browser: puppeteer.Browser,
   page: puppeteer.Page
 ): Promise<puppeteer.Page> => {
-  // https://id.jobcan.jp/account/profile で「勤怠」リンクをクリックする
+  // 「勤怠」リンクをクリック（新しいタブが開く）
   await page.click("#jbc-app-links > ul > li:nth-child(2) > a");
   await page.waitForTimeout(3000);
 
-  // 新しいタブで https://ssl.jobcan.jp/employee が開くので、タブ遷移して「出勤簿」リンクをクリックする
+  // 新しいタブに遷移
   const pages = await browser.pages();
   const lastPage = pages[pages.length - 1];
   await lastPage.bringToFront();
+
+  // 「出勤簿」リンクをクリック
   await Promise.all([
     lastPage.waitForNavigation(),
     lastPage.click("#sidemenu > div.flex-shrink-0 > div > a:nth-child(1)"),
   ]);
   return lastPage;
+};
+
+// 「実労働時間」を取得して、あとで計算しやすいように数値型に変換する（e.g. "33:04" -> 33.06666666666667）
+const fetchWorkedHours = async (
+  attendancePage: puppeteer.Page
+): Promise<number> => {
+  // 実労働時間（e.g. "33:04"）
+  const workedTimeStr = await attendancePage.$eval(
+    "#search-result > div.row > div:nth-child(3) > div > div.card-body > table > tbody > tr:nth-child(1) > td > span",
+    (el) => el.textContent
+  );
+
+  const [hours, minutes] = workedTimeStr.split(":");
+  return parseFloat(hours) + parseFloat(minutes) / 60;
+};
+
+// 「実働日数」を取得して、あとで計算しやすいように数値型に変換する（e.g. "4" -> 4）
+const fetchWorkedDays = async (
+  attendancePage: puppeteer.Page
+): Promise<number> => {
+  // 実働日数（e.g. "4"）
+  const workedDaysStr = await attendancePage.$eval(
+    "#search-result > div.row > div:nth-child(2) > div > div.card-body > table > tbody > tr:nth-child(1) > td > span",
+    (el) => el.textContent
+  );
+
+  return parseInt(workedDaysStr);
+};
+
+// 残業時間を計算する（e.g. 33.06666666666667, 4 -> 1.06666666666667）
+const calcOvertime = (workedHours: number, workedDays: number): number => {
+  const regularWorkingHours = 8;
+  // return process.argv[process.argv.length - 1] !== "--holiday"
+  //   ? workedHours - workedDays * regularWorkingHours // 出勤日当日の午後以降に確認する用
+  //   : workedHours - (workedDays - 1) * regularWorkingHours; // 出勤日当日の朝や休日などに確認する用
+  // TODO: 平日に実働日数が増えるタイミングを確認して、不要ならば上記のコードと $ npm run start:holiday は消す
+  return workedHours - workedDays * regularWorkingHours;
+};
+
+// 残業時間を出力する（e.g. 1.06666666666667 -> void & 1 時間 4 分を出力）
+const print = (overtime: number) => {
+  const hours = Math.floor(overtime);
+  const minutes = Math.floor((overtime - hours) * 60);
+  const formattedOvertime = `${hours} 時間 ${minutes} 分`;
+
+  console.log("===============");
+  console.log(formattedOvertime);
+  console.log("===============");
 };

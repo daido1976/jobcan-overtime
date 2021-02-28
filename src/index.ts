@@ -8,7 +8,8 @@ import puppeteer from "puppeteer";
   const attendancePage = await visitAttendancePage(browser, loggedInPage);
   const workedHours = await fetchWorkedHours(attendancePage);
   const workedDays = await fetchWorkedDays(attendancePage);
-  const overtime = calcOvertime(workedHours, workedDays);
+  const overtimeHours = calcOvertimeHours(workedHours, workedDays);
+  const overtime = format(overtimeHours);
   print(overtime);
 
   await browser.close();
@@ -76,8 +77,8 @@ const fetchWorkedDays = async (
 };
 
 // 残業時間を計算する（e.g. 33.06666666666667, 4 -> 1.06666666666667）
-const calcOvertime = (workedHours: number, workedDays: number): number => {
-  const regularWorkingHours = 8;
+const calcOvertimeHours = (workedHours: number, workedDays: number): number => {
+  const regularWorkingHours = 8.0;
   // return process.argv[process.argv.length - 1] !== "--holiday"
   //   ? workedHours - workedDays * regularWorkingHours // 出勤日当日の午後以降に確認する用
   //   : workedHours - (workedDays - 1) * regularWorkingHours; // 出勤日当日の朝や休日などに確認する用
@@ -85,13 +86,16 @@ const calcOvertime = (workedHours: number, workedDays: number): number => {
   return workedHours - workedDays * regularWorkingHours;
 };
 
-// 残業時間を出力する（e.g. 1.06666666666667 -> void & 1 時間 4 分を出力）
-const print = (overtime: number) => {
-  const hours = Math.floor(overtime);
-  const minutes = Math.floor((overtime - hours) * 60);
-  const formattedOvertime = `${hours} 時間 ${minutes} 分`;
+// 残業時間を出力用に整形する（e.g. 1.06666666666667 -> "1 時間 4 分"）
+const format = (overtimeHours: number): string => {
+  const hours = Math.floor(overtimeHours);
+  const minutes = Math.floor((overtimeHours - hours) * 60);
+  return `${hours} 時間 ${minutes} 分`;
+};
 
+// 残業時間を出力する
+const print = (overtime: string) => {
   console.log("===============");
-  console.log(formattedOvertime);
+  console.log(overtime);
   console.log("===============");
 };

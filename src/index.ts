@@ -41,9 +41,14 @@ const visitAttendancePage = async (
   const lastPage = pages[pages.length - 1];
   await lastPage.bringToFront();
 
-  // 何故かヘッドレスモードの時だけ、サイドメニューが閉じているので開く
-  await lastPage.click("#sidemenu-closed > div > button");
-  await lastPage.waitForTimeout(1000);
+  // なぜかヘッドレスモードの時だけ、サイドメニューが閉じているので開く
+  const isSidemnuClosed = await lastPage.$eval("#sidemenu", (el) =>
+    el.classList.contains("side-closed")
+  );
+  if (isSidemnuClosed) {
+    await lastPage.click("#sidemenu-closed > div > button");
+    await lastPage.waitForTimeout(1000);
+  }
 
   // 「出勤簿」リンクをクリック
   await lastPage.click("#sidemenu > div.flex-shrink-0 > div > a:nth-child(1)");

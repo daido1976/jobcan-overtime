@@ -87,11 +87,11 @@ const fetchWorkedDays = async (
 // 残業時間を計算する（e.g. 33.06666666666667, 4 -> 1.06666666666667）
 const calcOvertimeHours = (workedHours: number, workedDays: number): number => {
   const regularWorkingHours = 8.0;
-  // return process.argv[process.argv.length - 1] !== "--holiday"
-  //   ? workedHours - workedDays * regularWorkingHours // 出勤日当日の午後以降に確認する用
-  //   : workedHours - (workedDays - 1) * regularWorkingHours; // 出勤日当日の朝や休日などに確認する用
+  return process.argv[process.argv.length - 1] === "--holiday"
+    ? workedHours - (workedDays - 1) * regularWorkingHours // 出勤日当日の朝や休日などに確認する用
+    : workedHours - workedDays * regularWorkingHours; // 出勤日当日の午後以降に確認する用
   // TODO: 平日に実働日数が増えるタイミングを確認して、不要ならば上記のコードと $ npm run start:holiday は消す
-  return workedHours - workedDays * regularWorkingHours;
+  // return workedHours - workedDays * regularWorkingHours;
 };
 
 // 残業時間を出力用に整形する（e.g. 1.06666666666667 -> "1 時間 4 分"）

@@ -10,5 +10,7 @@ See. https://all.jobcan.ne.jp/info/news/2390/
 
 ```sh
 $ cp .envrc.skeleton .envrc # And set environment variables.
-$ npm run start
+
+$ npm run start # 出勤日当日の午後以降に確認する場合
+$ npm run start:holiday # 出勤日当日の朝や休日などに確認する場合
 ```

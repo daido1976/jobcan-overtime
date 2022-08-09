@@ -20,10 +20,7 @@ const login = async (page: puppeteer.Page): Promise<puppeteer.Page> => {
   await page.goto("https://id.jobcan.jp/users/sign_in");
   await page.type("#user_email", process.env.MY_EMAIL);
   await page.type("#user_password", process.env.MY_PASSWORD);
-  await Promise.all([
-    page.waitForNavigation(),
-    page.click("#new_user > input.form__login"),
-  ]);
+  await Promise.all([page.waitForNavigation(), page.click("#login_button")]);
   return page;
 };
 
@@ -33,7 +30,7 @@ const visitAttendancePage = async (
   page: puppeteer.Page
 ): Promise<puppeteer.Page> => {
   // 「勤怠」リンクをクリック（新しいタブが開く）
-  await page.click("#jbc-app-links > ul > li:nth-child(2) > a");
+  await page.click("#jbc-app-links > ul > li:nth-child(3) > a");
   await page.waitForTimeout(3000);
 
   // 新しいタブに遷移
